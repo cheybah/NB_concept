@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NB CONCEPT — Logiciel de pilotage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#F3F4F6; --card:#fff; --ink:#111418; --ink2:#3A4048; --muted:#6B7280; --line:#E6E8EC; --line2:#F0F1F4;
+  --side:#15181C; --side2:#1E2227; --sideText:#A3A9B2;
+  --acc:#0E7A5F; --acc2:#0B6650; --accSoft:#E7F4EF; --accInk:#0A5A46;
+  --red:#C2362F; --redSoft:#FCECEA; --amber:#B86E00; --amberSoft:#FDF3E1; --blue:#2458B8; --blueSoft:#EAF0FB;
+  --r:12px; --sh:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"cv11" 1}
+i[data-lucide], svg.lucide{width:16px;height:16px;stroke-width:1.9;flex-shrink:0}
+button{font-family:inherit;cursor:pointer}
+
+/* ---------- Layout ---------- */
+.app{display:flex;height:100vh;overflow:hidden}
+.side{width:248px;background:var(--side);color:var(--sideText);display:flex;flex-direction:column;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:11px;padding:20px 20px 18px;border-bottom:1px solid #23272D}
+.logo{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#12916F,#0B6650);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;letter-spacing:-.5px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.brand b{display:block;color:#fff;font-size:15px;letter-spacing:.6px;font-weight:800}
+.brand small{font-size:11px;color:#7C838D}
+.nav{flex:1;overflow-y:auto;padding:10px 12px}
+.nav h6{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:#5F6670;font-weight:600;padding:16px 10px 7px}
+.nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:8px;color:var(--sideText);text-decoration:none;font-weight:500;cursor:pointer;margin-bottom:1px;transition:background .15s,color .15s;position:relative}
+.nav a:hover{background:var(--side2);color:#E5E7EB}
+.nav a.active{background:rgba(18,145,111,.16);color:#fff}
+.nav a.active::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:#19B48A}
+.nav a.active svg{color:#3DD2A6}
+.nav a .cnt{margin-left:auto;background:#C2362F;color:#fff;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px}
+.nav a.dis{opacity:.45;cursor:default}.nav a.dis:hover{background:none;color:var(--sideText)}
+.nav a .soon{margin-left:auto;font-size:10px;border:1px solid #3A3F46;padding:1px 6px;border-radius:6px}
+.sidefoot{padding:14px 16px;border-top:1px solid #23272D;font-size:11.5px}
+.sync{display:flex;align-items:center;gap:8px;color:#9AA1AA;margin-bottom:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:#22C08F;box-shadow:0 0 0 3px rgba(34,192,143,.18)}
+.demo{color:#5F6670;font-size:10.5px;margin-top:8px}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:62px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 28px;flex-shrink:0}
+.crumbs{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px}
+.crumbs b{color:var(--ink);font-weight:600}
+.crumbs svg{width:14px;height:14px}
+.search{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 12px;width:300px;min-width:180px;flex-shrink:1;color:var(--muted)}
+.search span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kbd{font-size:10.5px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:1px 5px}
+.iconbtn{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink2);position:relative}
+.iconbtn .pip{position:absolute;top:7px;right:8px;width:7px;height:7px;background:var(--red);border-radius:50%;border:2px solid #fff}
+.user{display:flex;align-items:center;gap:10px;padding-left:14px;border-left:1px solid var(--line)}
+.avatar{width:34px;height:34px;border-radius:50%;background:#1E2227;color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+.user b{display:block;font-size:13px}.user small{color:var(--muted);font-size:11.5px}
+
+.scroll{flex:1;overflow-y:auto}
+#view{padding:26px 28px 48px;max-width:1440px;transition:opacity .18s ease, transform .18s ease}
+#view.out{opacity:0;transform:translateY(6px)}
+
+/* ---------- Components ---------- */
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+.ph h1{font-size:23px;font-weight:700;letter-spacing:-.4px}
+.ph p{color:var(--muted);margin-top:4px}
+.actions{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink2);font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{background:#F9FAFB}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.pri:hover{background:var(--acc2)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-weight:500;margin-bottom:12px;cursor:pointer}
+.back:hover{color:var(--acc)}
+
+.grid{display:grid;gap:18px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr}
+.g21{grid-template-columns:2fr 1fr}.g12{grid-template-columns:1fr 2fr}
+.mb{margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.card .hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 0}
+.card .hd h3{font-size:14.5px;font-weight:650;display:flex;align-items:center;gap:8px}
+.card .hd h3 svg{color:var(--muted)}
+.card .hd .lnk{color:var(--acc);font-weight:600;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:3px}
+.card .bd{padding:16px 18px 18px}
+.card .bd.np{padding:12px 0 6px}
+
+.kpi{padding:18px}
+.kpi .lbl{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-weight:500;font-size:12.5px}
+.kpi .ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--accSoft);color:var(--acc)}
+.kpi .val{font-size:26px;font-weight:750;letter-spacing:-.8px;margin:10px 0 6px}
+.kpi .val small{font-size:14px;color:var(--muted);font-weight:600;letter-spacing:0;margin-left:3px}
+.trend{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600}
+.trend.up{color:var(--acc)}.trend.dn{color:var(--red)}
+.trend svg{width:14px;height:14px}
+.kpi .sub{color:var(--muted);font-size:12px;margin-left:4px;font-weight:500}
+
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;text-align:left;padding:9px 18px;border-bottom:1px solid var(--line);background:#FAFBFC;white-space:nowrap}
+td{padding:11px 18px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.click{cursor:pointer;transition:background .12s}
+tr.click:hover td{background:#F7FAF9}
+.r{text-align:right}.c{text-align:center}
+.mono{font-variant-numeric:tabular-nums}
+.ref{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--ink2)}
+.muted{color:var(--muted)}
+.strong{font-weight:650}
+.pos{color:var(--acc);font-weight:600}.neg{color:var(--red);font-weight:600}
+table.tight td,table.tight th{white-space:nowrap;padding-left:12px;padding-right:12px}
+table.tight td:first-child,table.tight th:first-child{padding-left:18px}
+.mini b{line-height:1.35}
+tfoot td{font-weight:700;background:#FAFBFC;border-top:1px solid var(--line)}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-green{background:var(--accSoft);color:var(--accInk)}
+.b-red{background:var(--redSoft);color:var(--red)}
+.b-amber{background:var(--amberSoft);color:var(--amber)}
+.b-blue{background:var(--blueSoft);color:var(--blue)}
+.b-gray{background:#F0F1F3;color:#555C66}
+
+.bar{height:6px;border-radius:4px;background:var(--line2);overflow:hidden;min-width:70px}
+.bar i{display:block;height:100%;border-radius:4px}
+
+.toolbar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.field{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:7px 11px;color:var(--muted);min-width:280px;background:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 11px;border-radius:20px;border:1px solid var(--line);font-size:12px;font-weight:550;color:var(--ink2);background:#fff;cursor:pointer}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.mini{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--line2)}
+.mini:last-child{border-bottom:none}
+.mini .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+.mini b{display:block;font-weight:600}.mini small{color:var(--muted);font-size:12px}
+.mini .end{margin-left:auto;text-align:right}
+
+.treso .acct{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px dashed var(--line)}
+.treso .acct:last-of-type{border-bottom:none}
+.treso .big{font-size:24px;font-weight:750;letter-spacing:-.6px}
+.treso .total{background:var(--side);color:#fff;border-radius:10px;padding:14px 16px;margin-top:12px;display:flex;justify-content:space-between;align-items:center}
+.treso .total small{color:#9AA1AA;display:block;font-size:11.5px}
+.treso .total b{font-size:21px;letter-spacing:-.5px}
+.aico{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.kv{display:flex;justify-content:space-between;padding:7px 0;font-size:12.5px}
+.kv span{color:var(--muted)}
+
+/* stepper */
+.stepper{display:flex;align-items:flex-start;padding:22px 18px 20px}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.step:not(:last-child)::after{content:"";position:absolute;top:17px;left:calc(50% + 24px);right:calc(-50% + 24px);height:2px;background:var(--line)}
+.step.done:not(:last-child)::after{background:var(--acc)}
+.step .circ{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);background:#fff;color:var(--muted);z-index:1}
+.step.done .circ{background:var(--acc);border-color:var(--acc);color:#fff}
+.step.cur .circ{border-color:var(--acc);color:var(--acc);box-shadow:0 0 0 5px var(--accSoft)}
+.step b{margin-top:10px;font-size:13px}
+.step small{color:var(--muted);font-size:11.5px;margin-top:3px}
+.step .ref{margin-top:4px;font-size:11px}
+
+/* profit block */
+.profit{display:grid;grid-template-columns:1.25fr 1fr;gap:0}
+.waterfall{padding:20px 22px;border-right:1px solid var(--line)}
+.wrow{display:grid;grid-template-columns:150px 1fr 120px;align-items:center;gap:14px;padding:8px 0}
+.wrow .lab{font-weight:550;color:var(--ink2)}
+.wrow .track{height:22px;border-radius:5px;background:var(--line2);position:relative;overflow:hidden}
+.wrow .track i{position:absolute;top:0;bottom:0;border-radius:5px}
+.wrow .amt{text-align:right;font-weight:650}
+.wrow.res{border-top:2px solid var(--ink);margin-top:6px;padding-top:12px}
+.wrow.res .lab{font-weight:750;color:var(--ink)}
+.result{padding:22px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,#F5FBF8,#fff)}
+.result .lab{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.result .hero{font-size:46px;font-weight:800;letter-spacing:-1.6px;color:var(--acc);line-height:1.1;margin:6px 0 2px}
+.result .hero small{font-size:20px;letter-spacing:0}
+.ring{display:flex;align-items:center;gap:16px;margin-top:18px}
+.ring svg{width:84px;height:84px}
+.ring b{font-size:13.5px}
+.formula{margin-top:16px;font-size:12px;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:8px;padding:9px 11px;line-height:1.55}
+
+.info{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.info div{padding:14px 18px;border-right:1px solid var(--line2)}
+.info div:last-child{border-right:none}
+.info span{display:block;color:var(--muted);font-size:11.5px;font-weight:500;margin-bottom:4px}
+.info b{font-weight:600}
+
+.tabs{display:flex;gap:4px;background:#ECEEF1;padding:4px;border-radius:10px;width:fit-content;margin-bottom:18px}
+.tab{padding:7px 14px;border-radius:7px;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:7px}
+.tab.on{background:#fff;color:var(--ink);box-shadow:var(--sh)}
+
+.account-hero{padding:22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.account-hero .big{font-size:34px;font-weight:800;letter-spacing:-1.2px}
+.account-hero .ico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center}
+.account-hero .ico svg{width:22px;height:22px}
+
+.exp{padding:18px;display:flex;flex-direction:column;gap:12px}
+.exp .top2{display:flex;align-items:center;gap:12px}
+.exp .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--accSoft);color:var(--acc)}
+.exp b{font-size:14px}.exp p{color:var(--muted);font-size:12.5px;line-height:1.45}
+.fmt{display:flex;gap:6px}
+.fmt span{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;padding:5px 9px;border-radius:7px;border:1px solid var(--line);cursor:pointer}
+.fmt .x{color:#127A43}.fmt .p{color:#C2362F}.fmt .v{color:#555C66}
+
+.empavatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff}
+
+/* invoice */
+.inv-wrap{display:flex;justify-content:center;padding:4px 0}
+#invoice{background:#fff;width:794px;min-height:1050px;padding:52px 56px;border:1px solid var(--line);box-shadow:0 10px 40px rgba(16,24,40,.10);border-radius:4px;font-size:12.5px;color:#1A1D21;position:relative}
+#invoice .ihead{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:26px;border-bottom:3px solid var(--acc)}
+#invoice .ilogo{display:flex;align-items:center;gap:12px}
+#invoice .ilogo .logo{width:50px;height:50px;font-size:19px;border-radius:11px}
+#invoice .ilogo b{font-size:21px;letter-spacing:1px;font-weight:800;display:block}
+#invoice .ilogo small{color:var(--muted);font-size:11px;letter-spacing:.3px}
+#invoice .co{font-size:11px;color:#4B5159;line-height:1.6;margin-top:12px}
+#invoice .ititle{text-align:right}
+#invoice .ititle h2{font-size:30px;font-weight:800;letter-spacing:2px;color:var(--acc)}
+#invoice .ititle table{margin-top:10px;width:auto;margin-left:auto}
+#invoice .ititle td{padding:2px 0 2px 16px;border:none;font-size:11.5px;text-align:right}
+#invoice .ititle td:first-child{color:var(--muted)}
+#invoice .parties{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:26px 0}
+#invoice .party span{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+#invoice .party .box{margin-top:7px;background:#F7F8FA;border-radius:8px;padding:13px 15px;line-height:1.6}
+#invoice .party .box b{font-size:13.5px}
+#invoice table.items th{background:var(--side);color:#fff;border:none;font-size:10.5px;padding:9px 10px}
+#invoice table.items th:first-child{border-radius:6px 0 0 6px}#invoice table.items th:last-child{border-radius:0 6px 6px 0}
+#invoice table.items td:nth-child(2){white-space:normal}
+#invoice table.items td{padding:9px 10px;white-space:nowrap;font-size:12px;border-bottom:1px solid #ECEEF1}
+#invoice .totals{display:flex;justify-content:space-between;margin-top:22px;gap:30px}
+#invoice .words{flex:1;font-size:11.5px;color:#4B5159;line-height:1.6}
+#invoice .words .box{background:#F7F8FA;border-radius:8px;padding:12px 14px;margin-top:6px}
+#invoice .tt{width:290px}
+#invoice .tt div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #ECEEF1}
+#invoice .tt .grand{background:var(--acc);color:#fff;border-radius:8px;padding:12px 14px;margin-top:8px;border:none;font-size:15px;font-weight:800}
+#invoice .sign{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:40px}
+#invoice .sign div{border:1px dashed #CDD1D6;border-radius:8px;height:90px;padding:10px 12px;font-size:11px;color:var(--muted)}
+#invoice .ifoot{position:absolute;left:56px;right:56px;bottom:30px;border-top:1px solid #ECEEF1;padding-top:10px;font-size:10px;color:#8A9099;display:flex;justify-content:space-between}
+.stamp{position:absolute;bottom:250px;left:330px;transform:rotate(-12deg);border:2.5px solid var(--amber);color:var(--amber);font-weight:800;letter-spacing:1.5px;padding:6px 12px;border-radius:6px;font-size:13px;opacity:.75}
+
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--blueSoft);color:#1D3F80;border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.5}
+.note.warn{background:var(--amberSoft);color:#7A4A00}
+.note.ok{background:var(--accSoft);color:var(--accInk)}
+.feed .mini .ico{width:30px;height:30px;border-radius:50%;background:var(--line2);color:var(--ink2)}
+.feed .mini .ico svg{width:14px;height:14px}
+.chartbox{position:relative;height:270px}
+
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .side,.top,.noprint{display:none!important}
+  .app,.main,.scroll{height:auto;overflow:visible;display:block}
+  #view{padding:0;max-width:none}
+  #invoice{box-shadow:none;border:none;width:100%;min-height:297mm;border-radius:0}
+  .stamp{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">NB</div><div><b>NB CONCEPT</b><small>Pilotage & Gestion</small></div></div>
+    <nav class="nav" id="nav">
+      <h6>Pilotage</h6>
+      <a data-v="dashboard"><i data-lucide="layout-dashboard"></i>Tableau de bord</a>
+      <a data-v="rapports"><i data-lucide="bar-chart-3"></i>Rapports</a>
+      <h6>Opérations</h6>
+      <a data-v="chantiers"><i data-lucide="hard-hat"></i>Chantiers</a>
+      <a data-v="ventes"><i data-lucide="file-text"></i>Ventes</a>
+      <a data-v="clients"><i data-lucide="users"></i>Clients</a>
+      <a data-v="achats"><i data-lucide="shopping-cart"></i>Achats</a>
+      <a data-v="stock"><i data-lucide="package"></i>Stock & Articles<span class="cnt" id="alertCnt">2</span></a>
+      <h6>Finance & RH</h6>
+      <a data-v="caisse"><i data-lucide="wallet"></i>Caisse & Banque</a>
+      <a data-v="employes"><i data-lucide="contact"></i>Employés</a>
+      <a class="dis"><i data-lucide="calculator"></i>Comptabilité<span class="soon">Bientôt</span></a>
+      <a class="dis"><i data-lucide="settings"></i>Paramètres</a>
+    </nav>
+    <div class="sidefoot">
+      <div class="sync"><span class="dot"></span>Serveur local · 4 postes connectés</div>
+      <div class="sync"><i data-lucide="hard-drive" style="width:13px;height:13px"></i>Sauvegarde auto : aujourd'hui 03:00</div>
+      <div class="demo">Maquette de démonstration — données fictives</div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="search"><i data-lucide="search"></i><span>Rechercher article, client, chantier…</span><span class="kbd">Ctrl K</span></div>
+      <button class="iconbtn"><i data-lucide="plus"></i></button>
+      <button class="iconbtn" onclick="go('stock')"><i data-lucide="bell"></i><span class="pip"></span></button>
+      <div class="user"><div class="avatar">NB</div><div><b>Nabil B.</b><small>Administrateur</small></div></div>
+    </header>
+    <div class="scroll" id="scroll"><div id="view"></div></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   DONNÉES FICTIVES — partagées par toutes les vues (cohérence)
+   ===================================================================== */
+const CLIENTS = [
+  {id:'C001', nom:'Villa Lotfi', contact:'M. Lotfi Ben Ammar', type:'Particulier', ville:'Hammamet', adr:'Route de la Corniche, Hammamet Nord', tel:'+216 98 412 330', mail:'l.benammar@exemple.tn', mf:'—', depuis:'2024'},
+  {id:'C002', nom:'Résidence Les Jasmins', contact:'Mme Sonia Khelifi — Promotion Jasmins SARL', type:'Promoteur', ville:'Sousse', adr:'Avenue Hédi Chaker, Sahloul, Sousse', tel:'+216 73 225 140', mail:'achats@jasmins-promo.tn', mf:'1458213/B/A/M/000', depuis:'2023'},
+  {id:'C003', nom:'Hôtel Dar Salem', contact:'M. Riadh Salem — Directeur technique', type:'Hôtellerie', ville:'Nabeul', adr:'Zone touristique, Nabeul', tel:'+216 72 286 900', mail:'technique@darsalem.tn', mf:'0987345/C/P/M/000', depuis:'2022'},
+  {id:'C004', nom:'Ahmed Trabelsi', contact:'M. Ahmed Trabelsi', type:'Particulier', ville:'La Marsa', adr:'Rue du Lac Biwa, La Marsa', tel:'+216 22 731 905', mail:'a.trabelsi@exemple.tn', mf:'—', depuis:'2026'},
+];
+const FOURN = [
+  {id:'F01', nom:'Ste Import Céramique', ville:'Sfax', type:'Local', cat:'Carrelage, faïence'},
+  {id:'F02', nom:'Matériaux du Sud', ville:'Gabès', type:'Local', cat:'Peinture, plâtrerie, colles'},
+  {id:'F03', nom:'Fournisseur France Déco', ville:'Lyon (FR)', type:'Import', cat:'Parquet, luminaires design'},
+  {id:'F04', nom:'Sanitaires Méditerranée', ville:'Tunis', type:'Local', cat:'Sanitaire, robinetterie'},
+];
+const ARTICLES = [
+  {ref:'CAR-6060-BM', des:'Carrelage grès cérame 60×60 Beige marbré', cat:'Carrelage', marque:'Porcelanosa Line', u:'m²', pa:32.5, pv:48, stock:1420, min:150, res:260, f:'F01', dep:'Dépôt Ben Arous', dim:'60×60 cm · ép. 9 mm'},
+  {ref:'FAI-3090-BL', des:'Faïence murale 30×90 Blanc mat', cat:'Carrelage', marque:'Cerámica Levante', u:'m²', pa:28, pv:42, stock:85, min:100, res:40, f:'F01', dep:'Dépôt Ben Arous', dim:'30×90 cm · ép. 10 mm'},
+  {ref:'PEI-SAT-20', des:'Peinture satinée intérieure 20 L Blanc cassé', cat:'Peinture', marque:'Astral Pro', u:'seau', pa:95, pv:138, stock:64, min:20, res:12, f:'F02', dep:'Showroom', dim:'Seau 20 L'},
+  {ref:'PEI-FAC-15', des:'Peinture façade siloxane 15 L', cat:'Peinture', marque:'Astral Pro', u:'seau', pa:118, pv:169, stock:0, min:10, res:0, f:'F02', dep:'Showroom', dim:'Seau 15 L'},
+  {ref:'SAN-WCS-01', des:'WC suspendu céramique + bâti-support', cat:'Sanitaire', marque:'Geberit Duofix', u:'u', pa:410, pv:590, stock:18, min:5, res:4, f:'F04', dep:'Showroom', dim:'53×36 cm'},
+  {ref:'SAN-MIT-03', des:'Mitigeur lavabo chromé', cat:'Sanitaire', marque:'Grohe Eurosmart', u:'u', pa:78, pv:125, stock:46, min:15, res:6, f:'F04', dep:'Showroom', dim:'H. 16 cm'},
+  {ref:'LUM-SPT-12', des:'Spot LED encastrable 12 W blanc chaud', cat:'Luminaire', marque:'Philips', u:'u', pa:14.5, pv:24, stock:310, min:100, res:40, f:'F03', dep:'Dépôt Ben Arous', dim:'Ø 9 cm'},
+  {ref:'LUM-SUS-07', des:'Suspension laiton design', cat:'Luminaire', marque:'Atelier Lyon', u:'u', pa:205.4, pv:320, stock:12, min:4, res:2, f:'F03', dep:'Showroom', dim:'Ø 45 cm'},
+  {ref:'PAR-CHE-14', des:'Parquet contrecollé chêne 14 mm', cat:'Parquet', marque:'Panaget', u:'m²', pa:70.6, pv:98, stock:140, min:60, res:20, f:'F03', dep:'Dépôt Ben Arous', dim:'Lames 1200×190 mm'},
+  {ref:'PLA-BA13-S', des:'Plaque de plâtre BA13 standard', cat:'Plâtrerie', marque:'Placo', u:'u', pa:12.8, pv:18.5, stock:520, min:200, res:120, f:'F02', dep:'Dépôt Ben Arous', dim:'250×120 cm'},
+  {ref:'COL-C2-25', des:'Colle carrelage C2 25 kg', cat:'Consommables', marque:'Weber', u:'sac', pa:23, pv:34, stock:260, min:80, res:30, f:'F02', dep:'Dépôt Ben Arous', dim:'Sac 25 kg'},
+];
+const art = r => ARTICLES.find(a=>a.ref===r);
+const cli = id => CLIENTS.find(c=>c.id===id);
+const fou = id => FOURN.find(f=>f.id===id);
+
+const EMPLOYES = [
+  {id:'E01', nom:'Karim Mejri', poste:"Chef d'équipe", taux:15, h:168, hs:12, pres:98, ch:'CH-2026-017', col:'#0E7A5F'},
+  {id:'E02', nom:'Sami Gharbi', poste:'Carreleur', taux:12.5, h:172, hs:16, pres:100, ch:'CH-2026-019', col:'#2458B8'},
+  {id:'E03', nom:'Walid Ayari', poste:'Plombier', taux:15, h:154, hs:6, pres:94, ch:'CH-2026-019', col:'#7C4DCC'},
+  {id:'E04', nom:'Hichem Belhadj', poste:'Peintre', taux:10, h:160, hs:8, pres:96, ch:'CH-2026-021', col:'#B86E00'},
+  {id:'E05', nom:'Nadia Hamdi', poste:'Commerciale showroom', taux:9.5, h:176, hs:0, pres:100, ch:'—', col:'#C2362F'},
+  {id:'E06', nom:'Mourad Jlassi', poste:'Magasinier', taux:8.5, h:176, hs:4, pres:97, ch:'—', col:'#3A4048'},
+];
+
+/* Chantiers — tous les totaux sont calculés à partir des lignes */
+const CHANTIERS = [
+  {id:'CH-2026-014', nom:'Chantier Villa Lotfi — Hammamet', court:'Villa Lotfi', client:'C001', adr:'Route de la Corniche, Hammamet Nord', debut:'01/09/2026', fin:'15/10/2026', resp:'Karim Mejri', statut:'Terminé', devis:'DV-2026-081', vente:10000, avancement:100,
+   desc:'Rénovation salle de bain + séjour (carrelage, sanitaire, éclairage, peinture)',
+   mats:[['CAR-6060-BM',45,46],['FAI-3090-BL',28,30],['SAN-WCS-01',1,1],['SAN-MIT-03',2,2],['LUM-SPT-12',24,24],['PEI-SAT-20',6,5],['COL-C2-25',12,12]],
+   mo:[['Karim Mejri',"Chef d'équipe",42,40,15],['Sami Gharbi','Carreleur',40,36,12.5],['Walid Ayari','Plombier',18,18,15],['Hichem Belhadj','Peintre',20,18,10]],
+   autres:[['Transport','Transport matériaux Ben Arous → Hammamet (3 rotations)',300,300],['Carburant','Carburant véhicule chef d\'équipe',150,120],['Location','Location disqueuse & échafaudage roulant',100,80]]},
+  {id:'CH-2026-017', nom:'Rénovation Hôtel Dar Salem', court:'Hôtel Dar Salem', client:'C003', adr:'Zone touristique, Nabeul', debut:'08/09/2026', fin:'30/11/2026', resp:'Karim Mejri', statut:'En cours', devis:'DV-2026-064', vente:68500, avancement:72,
+   desc:'Rénovation hall d\'accueil et 12 chambres — sols, éclairage, peinture',
+   mats:[['CAR-6060-BM',500,520],['LUM-SPT-12',380,380],['LUM-SUS-07',24,24],['PEI-SAT-20',40,42]],
+   mo:[['Karim Mejri',"Chef d'équipe",150,160,15],['Sami Gharbi','Carreleur',210,220,12.5],['Walid Ayari','Plombier',140,140,15],['Hichem Belhadj','Peintre',180,190,10],['Équipe électricité (2)','Électriciens',280,280,11]],
+   autres:[['Transport','Transport matériaux (6 rotations)',1800,1800],['Sous-traitance','Sous-traitance courant faible',3600,3600],['Location','Location échafaudage',500,650],['Carburant','Carburant',200,240]]},
+  {id:'CH-2026-019', nom:'Résidence Les Jasmins — Bloc B', court:'Les Jasmins Bloc B', client:'C002', adr:'Sahloul, Sousse', debut:'15/07/2026', fin:'20/12/2026', resp:'Sami Gharbi', statut:'En cours', devis:'DV-2026-047', vente:124000, avancement:81,
+   desc:'Finitions 16 appartements — carrelage, faïence, sanitaire, cloisons',
+   mats:[['CAR-6060-BM',1200,1260],['FAI-3090-BL',520,560],['SAN-WCS-01',16,16],['SAN-MIT-03',32,32],['PLA-BA13-S',380,410]],
+   mo:[['Équipe carrelage (3)','Carreleurs',820,900,12.5],['Walid Ayari','Plombier',400,420,15],['Équipe plâtrerie','Plaquistes',700,760,11],['Karim Mejri',"Chef d'équipe",240,260,15]],
+   autres:[['Transport','Transport matériaux (13 rotations)',3600,3900],['Sous-traitance','Sous-traitance étanchéité',5200,5200],['Location','Location monte-charge',1400,1600],['Achats supp.','Achats complémentaires quincaillerie',300,640]]},
+  {id:'CH-2026-021', nom:'Cuisine & séjour — Ahmed Trabelsi', court:'Trabelsi — La Marsa', client:'C004', adr:'Rue du Lac Biwa, La Marsa', debut:'29/09/2026', fin:'05/11/2026', resp:'Hichem Belhadj', statut:'En cours', devis:'DV-2026-095', vente:7800, avancement:64,
+   desc:'Pose parquet séjour, éclairage et peinture cuisine',
+   mats:[['PAR-CHE-14',38,48],['LUM-SPT-12',16,18],['LUM-SUS-07',2,2],['PEI-SAT-20',6,8]],
+   mo:[['Hichem Belhadj','Peintre',60,70,10],['Sami Gharbi','Poseur parquet',52,64,12.5],['Karim Mejri',"Chef d'équipe",30,40,15]],
+   autres:[['Transport','Transport matériaux (2 rotations)',200,400],['Achats supp.','Plinthes & barres de seuil (non prévues)',0,520],['Carburant','Carburant',60,90]]},
+  {id:'CH-2026-022', nom:'Appartement témoin — Les Jasmins', court:'Appart. témoin Jasmins', client:'C002', adr:'Sahloul, Sousse', debut:'03/11/2026', fin:'28/11/2026', resp:'Karim Mejri', statut:'En attente', devis:'DV-2026-102', vente:15200, avancement:0, margePrev:32,
+   desc:'Aménagement complet de l\'appartement témoin (démarrage après validation devis)', mats:[], mo:[], autres:[]},
+];
+CHANTIERS.forEach(c=>{
+  c.matR = c.mats.reduce((s,m)=>s+m[2]*art(m[0]).pa,0);
+  c.matP = c.mats.reduce((s,m)=>s+m[1]*art(m[0]).pa,0);
+  c.moR = c.mo.reduce((s,m)=>s+m[3]*m[4],0);
+  c.moP = c.mo.reduce((s,m)=>s+m[2]*m[4],0);
+  c.trR = c.autres.filter(a=>a[0]==='Transport').reduce((s,a)=>s+a[3],0);
+  c.trP = c.autres.filter(a=>a[0]==='Transport').reduce((s,a)=>s+a[2],0);
+  c.auR = c.autres.filter(a=>a[0]!=='Transport').reduce((s,a)=>s+a[3],0);
+  c.auP = c.autres.filter(a=>a[0]!=='Transport').reduce((s,a)=>s+a[2],0);
+  c.cout = c.matR+c.moR+c.trR+c.auR;
+  c.coutP = c.matP+c.moP+c.trP+c.auP;
+  c.benef = c.vente - c.cout;
+  c.marge = c.cout ? c.benef/c.vente*100 : null;
+});
+const chan = id => CHANTIERS.find(c=>c.id===id);
+
+/* Achats */
+const RATE = 3.40;
+const ACHATS = [
+  {id:'BC-2026-0420', f:'F01', date:'21/10/2026', statut:'En attente', etape:1, lignes:[['FAI-3090-BL',600,28]], note:'Réapprovisionnement faïence (stock bas)'},
+  {id:'BC-2026-0418', f:'F02', date:'19/10/2026', statut:'En attente', etape:1, lignes:[['PEI-FAC-15',40,118],['PLA-BA13-S',240,12.8]], note:'Rupture peinture façade'},
+  {id:'BC-2026-0415', f:'F03', date:'09/10/2026', statut:'Reçu', etape:3, import:true, eur:[['PAR-CHE-14',300,16.5],['LUM-SUS-07',40,48]], frais:{transport:1850,assurance:240,douane:3270,transit:680}, note:'Importation conteneur groupage Marseille → Radès'},
+  {id:'BC-2026-0412', f:'F01', date:'06/10/2026', statut:'Reçu', etape:2, lignes:[['CAR-6060-BM',760,32.5]], note:'Stock carrelage chantiers Q4'},
+  {id:'BC-2026-0409', f:'F04', date:'03/10/2026', statut:'Payé', etape:4, lignes:[['SAN-WCS-01',20,410],['SAN-MIT-03',40,78]], note:'Sanitaires Résidence Les Jasmins'},
+];
+ACHATS.forEach(b=>{
+  if(b.import){
+    b.valEur = b.eur.reduce((s,l)=>s+l[1]*l[2],0);
+    b.valDT = b.valEur*RATE;
+    b.totFrais = Object.values(b.frais).reduce((s,v)=>s+v,0);
+    b.total = b.valDT + b.totFrais;
+    b.coef = b.total/b.valDT;
+  } else b.total = b.lignes.reduce((s,l)=>s+l[1]*l[2],0);
+});
+const bc = id => ACHATS.find(b=>b.id===id);
+
+/* Documents de vente */
+const DOCS = [
+  {num:'FA-2026-0234', type:'Facture', client:'COMPTOIR', date:'22/10/2026', ttc:1245, paye:1245, statut:'Payée'},
+  {num:'FA-2026-0233', type:'Facture', client:'C004', date:'21/10/2026', ttc:4200, paye:2000, statut:'Partielle'},
+  {num:'DV-2026-102', type:'Devis', client:'C002', date:'20/10/2026', ttc:18089, statut:'Envoyé'},
+  {num:'FA-2026-0231', type:'Facture', client:'C001', date:'20/10/2026', ttc:11901, paye:6000, statut:'Partielle'},
+  {num:'FA-2026-0230', type:'Facture', client:'C002', date:'30/09/2026', ttc:47600, paye:0, statut:'Échue'},
+  {num:'FA-2026-0228', type:'Facture', client:'C003', date:'19/10/2026', ttc:25000, paye:25000, statut:'Payée'},
+  {num:'BL-2026-0318', type:'Bon de livraison', client:'C004', date:'14/10/2026', ttc:3920, statut:'Livré'},
+  {num:'BL-2026-0309', type:'Bon de livraison', client:'C001', date:'08/10/2026', ttc:5982, statut:'Livré'},
+  {num:'CMD-2026-077', type:'Commande', client:'C003', date:'06/10/2026', ttc:21420, statut:'Confirmée'},
+  {num:'FA-2026-0219', type:'Facture', client:'C003', date:'15/09/2026', ttc:35701, paye:20000, statut:'Partielle'},
+  {num:'DV-2026-095', type:'Devis', client:'C004', date:'22/09/2026', ttc:9283, statut:'Accepté'},
+  {num:'CMD-2026-071', type:'Commande', client:'C001', date:'26/09/2026', ttc:11901, statut:'Confirmée'},
+  {num:'DV-2026-081', type:'Devis', client:'C001', date:'19/09/2026', ttc:11901, statut:'Accepté'},
+  {num:'FA-2026-0225', type:'Facture', client:'C002', date:'29/08/2026', ttc:59501, paye:59501, statut:'Payée'},
+  {num:'FA-2026-0156', type:'Facture', client:'C001', date:'14/06/2026', ttc:2784.6, paye:2784.6, statut:'Payée'},
+];
+const creance = id => DOCS.filter(d=>d.type==='Facture'&&d.client===id).reduce((s,d)=>s+(d.ttc-d.paye),0);
+const caClient = id => DOCS.filter(d=>d.type==='Facture'&&d.client===id).reduce((s,d)=>s+d.ttc,0);
+
+/* Caisse & banque — mouvements du plus récent au plus ancien */
+const CAISSE = {nom:'Caisse Showroom', solde:8745.5, mvts:[
+  ['22/10/2026','Ventes comptoir — FA-2026-0234','Vente',1245],
+  ['22/10/2026','Fournitures de bureau','Dépense',-85],
+  ['21/10/2026','Acompte espèces Ahmed Trabelsi — FA-2026-0233','Encaissement client',2000],
+  ['21/10/2026','Carburant chantier Villa Lotfi (CH-2026-014)','Dépense chantier',-120],
+  ['20/10/2026','Versement espèces → Compte bancaire','Virement interne',-5000],
+  ['20/10/2026','Ventes comptoir journée','Vente',1870.5],
+  ['19/10/2026','Avance sur salaire — Sami Gharbi','Salaire',-300],
+  ['18/10/2026','Ventes comptoir journée','Vente',2215],
+]};
+const BANQUE = {nom:'Compte Bancaire', solde:142380.25, mvts:[
+  ['22/10/2026','Virement reçu Hôtel Dar Salem — FA-2026-0228','Encaissement client',25000],
+  ['21/10/2026','Chèque n° 4471209 Villa Lotfi — FA-2026-0231','Encaissement client',6000],
+  ['21/10/2026','Paiement Sanitaires Méditerranée — BC-2026-0409','Paiement fournisseur',-11320],
+  ['20/10/2026','Versement espèces Caisse Showroom','Virement interne',5000],
+  ['18/10/2026','Cotisations CNSS — T3 2026','Charges sociales',-3420],
+  ['17/10/2026','Frais transitaire import — BC-2026-0415','Frais import',-680],
+  ['15/10/2026','Loyer dépôt Ben Arous — octobre','Charges fixes',-2500],
+  ['12/10/2026','Virement reçu Résidence Les Jasmins — FA-2026-0225','Encaissement client',18000],
+]};
+[CAISSE,BANQUE].forEach(a=>{let s=a.solde; a.mvts.forEach(m=>{m[4]=s; s-=m[3];});});
+
+const MOIS = ['Nov','Déc','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct'];
+const CA12 = [142300,168400,121900,134600,158200,176500,203100,221400,197800,149300,212600,186420];
+const ACH12 = [78200,95100,70400,88300,92600,104200,118500,131000,109400,84100,126300,0];
+ACH12[11] = Math.round(ACHATS.reduce((s,b)=>s+b.total,0));
+
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+const fmt = (n,d=3)=> Number(n).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const dt = (n,d=3)=> fmt(n,d)+' DT';
+const ic = n => `<i data-lucide="${n}"></i>`;
+const BCOL = {'En cours':'blue','Terminé':'green','En attente':'amber','Reçu':'blue','Payé':'green','Payée':'green','Partielle':'amber','Échue':'red','Livré':'green','Confirmée':'blue','Accepté':'green','Envoyé':'gray','Rupture':'red','Stock bas':'amber','OK':'green','Présent':'green'};
+const badge = s => `<span class="badge b-${BCOL[s]||'gray'}">${s}</span>`;
+const stStatus = a => a.stock===0?'Rupture':(a.stock<a.min?'Stock bas':'OK');
+const mCol = m => m===null?'var(--muted)':(m<0?'var(--red)':(m<15?'var(--amber)':'var(--acc)'));
+const mTxt = (c)=> c.marge===null?`<span class="muted">Prév. ${c.margePrev} %</span>`:`<b style="color:${mCol(c.marge)}">${fmt(c.marge,1)} %</b>`;
+const initials = n => n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+const stockValue = ()=> ARTICLES.reduce((s,a)=>s+a.stock*a.pa,0);
+const alerts = ()=> ARTICLES.filter(a=>stStatus(a)!=='OK');
+const cname = id => id==='COMPTOIR'?'Vente comptoir':cli(id).nom;
+const ph = (t,s,acts='') => `<div class="ph"><div><h1>${t}</h1>${s?`<p>${s}</p>`:''}</div><div class="actions noprint">${acts}</div></div>`;
+const backL = (v,l) => `<div class="back noprint" onclick="go('${v}')">${ic('arrow-left')}${l}</div>`;
+
+/* =====================================================================
+   VUES
+   ===================================================================== */
+const V = {};
+
+V.dashboard = () => {
+  const vs = stockValue(), al = alerts();
+  const caisseT = CAISSE.solde + BANQUE.solde;
+  const cre = DOCS.filter(d=>d.type==='Facture').reduce((s,d)=>s+(d.ttc-d.paye),0);
+  const dettes = ACHATS.filter(b=>b.statut==='Reçu').reduce((s,b)=>s+b.total,0);
+  return ph('Tableau de bord','Jeudi 22 octobre 2026 · Vue d\'ensemble de l\'activité',
+    `<button class="btn">${ic('calendar')}Octobre 2026</button><button class="btn" onclick="go('rapports')">${ic('download')}Exporter</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">CA du jour<span class="ic">${ic('receipt')}</span></div><div class="val">${fmt(3115.5,3)}<small>DT</small></div><span class="trend up">${ic('trending-up')}+12,4 %</span><span class="sub">vs jeudi dernier</span></div>
+    <div class="card kpi"><div class="lbl">CA du mois<span class="ic">${ic('trending-up')}</span></div><div class="val">${fmt(CA12[11],0)}<small>DT</small></div><span class="trend up">${ic('trending-up')}+8,1 %</span><span class="sub">à date vs sept.</span></div>
+    <div class="card kpi"><div class="lbl">Achats du mois<span class="ic" style="background:var(--blueSoft);color:var(--blue)">${ic('shopping-cart')}</span></div><div class="val">${fmt(ACH12[11],0)}<small>DT</small></div><span class="trend dn">${ic('trending-down')}−28,2 %</span><span class="sub">vs sept.</span></div>
+    <div class="card kpi"><div class="lbl">Valeur du stock<span class="ic" style="background:var(--amberSoft);color:var(--amber)">${ic('package')}</span></div><div class="val">${fmt(vs,0)}<small>DT</small></div><span class="trend dn">${ic('alert-triangle')}${al.length} alertes</span><span class="sub">au prix d'achat</span></div>
+  </div>
+  <div class="grid g21 mb">
+    <div class="card"><div class="hd"><h3>${ic('bar-chart-3')}Chiffre d'affaires & achats — 12 derniers mois</h3><div class="chips"><span class="chip on">12 mois</span><span class="chip">6 mois</span><span class="chip">Année</span></div></div>
+      <div class="bd"><div class="chartbox"><canvas id="chCA"></canvas></div></div></div>
+    <div class="card treso"><div class="hd"><h3>${ic('wallet')}Caisse & Banque</h3><span class="lnk" onclick="go('caisse')">Détail ${ic('chevron-right')}</span></div>
+      <div class="bd">
+        <div class="acct"><div class="aico" style="background:var(--accSoft);color:var(--acc)">${ic('banknote')}</div><div style="flex:1"><small class="muted">Caisse Showroom</small><div class="big">${dt(CAISSE.solde)}</div></div></div>
+        <div class="acct"><div class="aico" style="background:var(--blueSoft);color:var(--blue)">${ic('landmark')}</div><div style="flex:1"><small class="muted">Compte Bancaire</small><div class="big">${dt(BANQUE.solde)}</div></div></div>
+        <div class="total"><div><small>Trésorerie totale</small><b>${dt(caisseT)}</b></div>${ic('wallet')}</div>
+        <div style="margin-top:12px">
+          <div class="kv"><span>Créances clients</span><b class="pos">${dt(cre)}</b></div>
+          <div class="kv"><span>Dettes fournisseurs</span><b class="neg">${dt(dettes)}</b></div>
+        </div>
+      </div></div>
+  </div>
+  <div class="grid g21 mb">
+    <div class="card"><div class="hd"><h3>${ic('hard-hat')}Rentabilité par chantier</h3><span class="lnk" onclick="go('chantiers')">Tous les chantiers ${ic('chevron-right')}</span></div>
+      <div class="bd np"><table class="tight"><thead><tr><th>Chantier</th><th>Statut</th><th class="r">CA</th><th class="r">Coût total</th><th class="r">Bénéfice</th><th>Marge</th></tr></thead><tbody>
+      ${CHANTIERS.map(c=>`<tr class="click" onclick="go('chantier','${c.id}')"><td><b>${c.court}</b><div class="ref muted">${c.id}</div></td><td>${badge(c.statut)}</td><td class="r">${fmt(c.vente,0)}</td><td class="r">${c.cout?fmt(c.cout,0):'—'}</td><td class="r ${c.benef<0?'neg':'pos'}">${c.cout?fmt(c.benef,0):'—'}</td>
+      <td style="min-width:150px"><div style="display:flex;align-items:center;gap:10px"><div class="bar" style="flex:1;min-width:50px"><i style="width:${c.marge===null?0:Math.max(3,Math.min(100,Math.abs(c.marge)*2))}%;background:${mCol(c.marge)}"></i></div>${mTxt(c)}</div></td></tr>`).join('')}
+      </tbody></table></div></div>
+    <div class="card"><div class="hd"><h3>${ic('alert-triangle')}Alertes stock</h3><span class="lnk" onclick="go('stock')">Stock ${ic('chevron-right')}</span></div>
+      <div class="bd np">
+      ${al.map(a=>`<div class="mini click" style="cursor:pointer" onclick="go('article','${a.ref}')"><div class="ico" style="background:${a.stock===0?'var(--redSoft)':'var(--amberSoft)'};color:${a.stock===0?'var(--red)':'var(--amber)'}">${ic(a.stock===0?'x-circle':'alert-triangle')}</div><div><b>${a.des}</b><small>${a.ref} · min. ${a.min} ${a.u}</small></div><div class="end"><b style="color:${a.stock===0?'var(--red)':'var(--amber)'}">${a.stock} ${a.u}</b><br>${badge(stStatus(a))}</div></div>`).join('')}
+      <div style="padding:10px 18px 6px"><div class="note">${ic('truck')}<span>Réapprovisionnement en cours : <b>BC-2026-0418</b> (Matériaux du Sud) et <b>BC-2026-0420</b> (Ste Import Céramique).</span></div></div>
+      </div>
+      <div class="hd" style="padding-top:8px"><h3>${ic('activity')}Activité récente</h3></div>
+      <div class="bd np feed">
+        <div class="mini"><div class="ico">${ic('receipt')}</div><div><b>Nadia H. a créé FA-2026-0234</b><small>Vente comptoir · 09:12</small></div></div>
+        <div class="mini"><div class="ico">${ic('clock')}</div><div><b>Karim M. a pointé 8 h</b><small>CH-2026-017 Hôtel Dar Salem · 08:40</small></div></div>
+        <div class="mini"><div class="ico">${ic('hard-drive')}</div><div><b>Sauvegarde automatique terminée</b><small>Serveur local + copie externe · 03:00</small></div></div>
+      </div>
+    </div>
+  </div>`;
+};
+
+V.stock = () => {
+  const al = alerts();
+  return ph('Stock & Articles',`${ARTICLES.length} articles · 2 dépôts (Showroom, Dépôt Ben Arous)`,
+    `<button class="btn">${ic('arrow-left-right')}Mouvement</button><button class="btn">${ic('clipboard-check')}Inventaire</button><button class="btn pri">${ic('plus')}Nouvel article</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">Valeur du stock<span class="ic">${ic('package')}</span></div><div class="val">${fmt(stockValue(),0)}<small>DT</small></div><span class="sub" style="margin:0">Valorisé au prix d'achat</span></div>
+    <div class="card kpi"><div class="lbl">Articles actifs<span class="ic" style="background:var(--blueSoft);color:var(--blue)">${ic('boxes')}</span></div><div class="val">${ARTICLES.length}</div><span class="sub" style="margin:0">7 catégories</span></div>
+    <div class="card kpi"><div class="lbl">Ruptures / stock bas<span class="ic" style="background:var(--redSoft);color:var(--red)">${ic('alert-triangle')}</span></div><div class="val" style="color:var(--red)">${al.length}</div><span class="sub" style="margin:0">Commandes fournisseurs en cours</span></div>
+    <div class="card kpi"><div class="lbl">Réservé chantiers<span class="ic" style="background:var(--amberSoft);color:var(--amber)">${ic('hard-hat')}</span></div><div class="val">${fmt(ARTICLES.reduce((s,a)=>s+a.res*a.pa,0),0)}<small>DT</small></div><span class="sub" style="margin:0">Déduit automatiquement à la consommation</span></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><div class="field">${ic('search')}Rechercher une référence, une désignation…</div>
+      <div class="chips"><span class="chip on">Tous</span>${[...new Set(ARTICLES.map(a=>a.cat))].map(c=>`<span class="chip">${c}</span>`).join('')}</div>
+      <button class="btn sm" style="margin-left:auto">${ic('filter')}Dépôt : tous</button></div>
+    <table><thead><tr><th>Référence</th><th>Désignation</th><th>Catégorie</th><th class="r">Prix achat</th><th class="r">Prix vente</th><th class="r">Stock actuel</th><th class="r">Stock min</th><th class="r">Disponible</th><th>Statut</th></tr></thead><tbody>
+    ${ARTICLES.map(a=>{const s=stStatus(a);return `<tr class="click" onclick="go('article','${a.ref}')"><td class="ref">${a.ref}</td><td><b>${a.des}</b><div class="muted" style="font-size:12px">${a.marque}</div></td><td>${a.cat}</td><td class="r">${fmt(a.pa)}</td><td class="r">${fmt(a.pv)}</td><td class="r"><b style="color:${s==='OK'?'inherit':(s==='Rupture'?'var(--red)':'var(--amber)')}">${fmt(a.stock,0)}</b> <span class="muted">${a.u}</span></td><td class="r muted">${a.min}</td><td class="r">${fmt(Math.max(0,a.stock-a.res),0)}</td><td>${badge(s)}</td></tr>`}).join('')}
+    </tbody></table>
+  </div>`;
+};
+
+V.article = (ref) => {
+  const a = art(ref), s = stStatus(a);
+  const uses = CHANTIERS.filter(c=>c.mats.some(m=>m[0]===ref));
+  const bcs = ACHATS.filter(b=>(b.lignes||b.eur).some(l=>l[0]===ref));
+  // historique fictif généré de façon cohérente
+  const base = Math.max(1, Math.round(a.min/3));
+  let mv = [];
+  if(bcs.find(b=>b.statut!=='En attente')) { const b = bcs.find(b=>b.statut!=='En attente'); const l=(b.lignes||b.eur).find(l=>l[0]===ref); mv.push([b.date,'Entrée — réception achat',b.id+' · '+fou(b.f).nom,l[1]]); }
+  uses.forEach(c=>{const m=c.mats.find(m=>m[0]===ref); mv.push([c.debut,'Sortie chantier',c.id+' · '+c.court,-m[2]]);});
+  mv.push(['21/10/2026','Vente comptoir','FA-2026-0234',-Math.max(1,Math.round(base/2))]);
+  mv.push(['14/10/2026','Transfert dépôt','Ben Arous → Showroom',0]);
+  mv.push(['30/09/2026','Ajustement inventaire','Inventaire mensuel',-1]);
+  mv.sort((x,y)=>{const p=d=>d.split('/').reverse().join(''); return p(y[0]).localeCompare(p(x[0]));});
+  let st=a.stock; mv.forEach(m=>{m[4]=st; st-=m[3];});
+  return backL('stock','Retour au stock') + ph(a.des,`<span class="ref">${a.ref}</span> · ${a.cat} · ${a.marque}`,
+    `<button class="btn">${ic('printer')}Étiquette</button><button class="btn">${ic('pencil')}Modifier</button><button class="btn pri">${ic('arrow-left-right')}Mouvement de stock</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">Stock actuel</div><div class="val" style="color:${s==='OK'?'inherit':'var(--red)'}">${fmt(a.stock,0)}<small>${a.u}</small></div>${badge(s)}</div>
+    <div class="card kpi"><div class="lbl">Réservé / Disponible</div><div class="val">${a.res} <small>/ ${Math.max(0,a.stock-a.res)} ${a.u}</small></div><span class="sub" style="margin:0">Réservations chantiers</span></div>
+    <div class="card kpi"><div class="lbl">Prix achat → vente</div><div class="val" style="font-size:22px">${fmt(a.pa)} → ${fmt(a.pv)}<small>DT</small></div><span class="trend up">Marge ${fmt((a.pv-a.pa)/a.pv*100,1)} %</span></div>
+    <div class="card kpi"><div class="lbl">Valeur en stock</div><div class="val">${fmt(a.stock*a.pa,0)}<small>DT</small></div><span class="sub" style="margin:0">TVA 19 %</span></div>
+  </div>
+  <div class="grid g12">
+    <div class="card"><div class="hd"><h3>${ic('info')}Fiche article</h3></div><div class="bd">
+      ${[['Unité',a.u],['Dimensions',a.dim],['Catégorie',a.cat],['Marque / fabricant',a.marque],['Fournisseur principal',fou(a.f).nom],['Dépôt',a.dep],['Stock minimum',a.min+' '+a.u],['Dernier prix d\'achat',dt(a.pa)],['TVA','19 %']].map(k=>`<div class="kv"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('')}
+      ${s!=='OK'?`<div class="note warn" style="margin-top:12px">${ic('alert-triangle')}<span>Sous le seuil minimum. ${bcs.find(b=>b.statut==='En attente')?`Commande <b>${bcs.find(b=>b.statut==='En attente').id}</b> en attente de réception.`:''}</span></div>`:''}
+    </div></div>
+    <div class="card"><div class="hd"><h3>${ic('history')}Historique des mouvements</h3><span class="lnk">Tout voir ${ic('chevron-right')}</span></div>
+      <div class="bd np"><table><thead><tr><th>Date</th><th>Type</th><th>Document / origine</th><th class="r">Quantité</th><th class="r">Stock après</th></tr></thead><tbody>
+      ${mv.map(m=>`<tr><td class="muted">${m[0]}</td><td><b>${m[1]}</b></td><td class="ref">${m[2]}</td><td class="r ${m[3]>0?'pos':(m[3]<0?'neg':'muted')}">${m[3]>0?'+':''}${m[3]===0?'±0':fmt(m[3],0)}</td><td class="r">${fmt(m[4],0)}</td></tr>`).join('')}
+      </tbody></table></div></div>
+  </div>`;
+};
+
+const wf = (steps, cur) => `<div class="stepper">${steps.map((s,i)=>`<div class="step ${i<cur?'done':(i===cur?'cur':'')}"><div class="circ">${i<cur?ic('check'):ic(s[1])}</div><b>${s[0]}</b>${s[2]?`<span class="ref">${s[2]}</span>`:''}${s[3]?`<small>${s[3]}</small>`:''}</div>`).join('')}</div>`;
+
+V.achats = () => {
+  const dettes = ACHATS.filter(b=>b.statut==='Reçu').reduce((s,b)=>s+b.total,0);
+  return ph('Achats','Commandes fournisseurs, réceptions, importations et paiements',
+    `<button class="btn">${ic('globe')}Nouvelle importation</button><button class="btn pri">${ic('plus')}Bon de commande</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">Achats du mois</div><div class="val">${fmt(ACH12[11],0)}<small>DT</small></div><span class="sub" style="margin:0">${ACHATS.length} bons de commande</span></div>
+    <div class="card kpi"><div class="lbl">En attente de réception</div><div class="val" style="color:var(--amber)">${ACHATS.filter(b=>b.statut==='En attente').length}</div><span class="sub" style="margin:0">${dt(ACHATS.filter(b=>b.statut==='En attente').reduce((s,b)=>s+b.total,0),0)}</span></div>
+    <div class="card kpi"><div class="lbl">Dettes fournisseurs</div><div class="val" style="color:var(--red)">${fmt(dettes,0)}<small>DT</small></div><span class="sub" style="margin:0">Reçu, non payé</span></div>
+    <div class="card kpi"><div class="lbl">Importations en cours</div><div class="val">1</div><span class="sub" style="margin:0">Taux appliqué : 1 € = ${fmt(RATE,3)} DT</span></div>
+  </div>
+  <div class="card mb"><div class="hd"><h3>${ic('workflow')}Circuit achat</h3></div>${wf([['Demande','clipboard-list','','Besoin chantier / stock'],['Bon de commande','file-text','','Validé par admin'],['Réception','package-check','','Entrée en stock'],['Facture fournisseur','receipt','','Rapprochement'],['Paiement','landmark','','Caisse ou banque']],5)}</div>
+  <div class="grid g21">
+    <div class="card"><div class="hd"><h3>${ic('file-text')}Bons de commande</h3></div><div class="bd np"><table><thead><tr><th>N° BC</th><th>Fournisseur</th><th>Date</th><th>Objet</th><th class="r">Montant HT</th><th>Statut</th></tr></thead><tbody>
+    ${ACHATS.map(b=>`<tr class="click" onclick="go('bc','${b.id}')"><td class="ref">${b.id}</td><td><b>${fou(b.f).nom}</b>${b.import?' <span class="badge b-gray" style="margin-left:4px">Import</span>':''}</td><td class="muted">${b.date}</td><td class="muted" style="font-size:12.5px">${b.note}</td><td class="r strong">${fmt(b.total)}</td><td>${badge(b.statut)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="card"><div class="hd"><h3>${ic('factory')}Fournisseurs</h3></div><div class="bd np">
+    ${FOURN.map(f=>{const tot=ACHATS.filter(b=>b.f===f.id).reduce((s,b)=>s+b.total,0);return `<div class="mini"><div class="ico" style="background:${f.type==='Import'?'var(--blueSoft)':'var(--line2)'};color:${f.type==='Import'?'var(--blue)':'var(--ink2)'}">${ic(f.type==='Import'?'ship':'truck')}</div><div><b>${f.nom}</b><small>${f.ville} · ${f.cat}</small></div><div class="end"><b>${fmt(tot,0)} DT</b><br><small class="muted">ce mois</small></div></div>`}).join('')}
+    </div></div>
+  </div>`;
+};
+
+V.bc = (id) => {
+  const b = bc(id) , f = fou(b.f);
+  const stepIdx = {'En attente':1,'Reçu':b.etape,'Payé':5}[b.statut];
+  let body;
+  if(b.import){
+    body = `<div class="grid g21 mb">
+      <div class="card"><div class="hd"><h3>${ic('list')}Lignes de commande (devise : EUR)</h3></div><div class="bd np"><table><thead><tr><th>Article</th><th class="r">Qté</th><th class="r">PU (€)</th><th class="r">Total (€)</th><th class="r">Total (DT)</th><th class="r">Coût de revient unitaire</th></tr></thead><tbody>
+      ${b.eur.map(l=>{const a=art(l[0]);return `<tr><td><b>${a.des}</b><div class="ref muted">${a.ref}</div></td><td class="r">${l[1]} ${a.u}</td><td class="r">${fmt(l[2],2)}</td><td class="r">${fmt(l[1]*l[2],2)}</td><td class="r">${fmt(l[1]*l[2]*RATE)}</td><td class="r"><b class="pos">${fmt(l[2]*RATE*b.coef)} DT</b></td></tr>`}).join('')}
+      </tbody><tfoot><tr><td>Total marchandise</td><td></td><td></td><td class="r">${fmt(b.valEur,2)} €</td><td class="r">${fmt(b.valDT)} DT</td><td></td></tr></tfoot></table></div></div>
+      <div class="card"><div class="hd"><h3>${ic('calculator')}Calcul du coût de revient réel</h3></div><div class="bd">
+        <div class="kv"><span>Marchandise (${fmt(b.valEur,2)} € × ${fmt(RATE,3)})</span><b>${dt(b.valDT)}</b></div>
+        <div class="kv"><span>Transport maritime</span><b>${dt(b.frais.transport)}</b></div>
+        <div class="kv"><span>Assurance</span><b>${dt(b.frais.assurance)}</b></div>
+        <div class="kv"><span>Droits de douane</span><b>${dt(b.frais.douane)}</b></div>
+        <div class="kv"><span>Frais transitaire</span><b>${dt(b.frais.transit)}</b></div>
+        <div class="treso"><div class="total"><div><small>Coût de revient total</small><b>${dt(b.total)}</b></div><div style="text-align:right"><small>Coefficient</small><b>× ${fmt(b.coef,3)}</b></div></div></div>
+        <div class="note ok" style="margin-top:12px">${ic('check-circle')}<span>Les prix d'achat des articles ont été mis à jour avec le coût de revient réel.</span></div>
+      </div></div></div>`;
+  } else {
+    body = `<div class="card mb"><div class="hd"><h3>${ic('list')}Lignes de commande</h3></div><div class="bd np"><table><thead><tr><th>Référence</th><th>Désignation</th><th class="r">Quantité</th><th class="r">PU HT</th><th class="r">Total HT</th><th class="r">Stock actuel</th></tr></thead><tbody>
+    ${b.lignes.map(l=>{const a=art(l[0]);return `<tr><td class="ref">${a.ref}</td><td><b>${a.des}</b></td><td class="r">${l[1]} ${a.u}</td><td class="r">${fmt(l[2])}</td><td class="r strong">${fmt(l[1]*l[2])}</td><td class="r">${a.stock} ${badge(stStatus(a))}</td></tr>`}).join('')}
+    </tbody><tfoot><tr><td colspan="4">Total HT</td><td class="r">${dt(b.total)}</td><td></td></tr></tfoot></table></div></div>`;
+  }
+  return backL('achats','Retour aux achats') + ph(`Bon de commande ${b.id}`,`${f.nom} · ${f.ville} · émis le ${b.date}`,
+    `<button class="btn">${ic('printer')}Imprimer</button><button class="btn">${ic('mail')}Envoyer</button><button class="btn pri">${ic(b.statut==='En attente'?'package-check':'landmark')}${b.statut==='En attente'?'Réceptionner':'Enregistrer paiement'}</button>`) +
+  `<div class="card mb"><div class="info"><div><span>Fournisseur</span><b>${f.nom}</b></div><div><span>Type</span><b>${b.import?'Importation (EUR)':'Achat local'}</b></div><div><span>Statut</span>${badge(b.statut)}</div><div><span>Montant</span><b>${dt(b.total)}</b></div></div></div>
+  <div class="card mb">${wf([['Demande','clipboard-list'],['Bon de commande','file-text',b.id,b.date],['Réception','package-check'],['Facture fournisseur','receipt'],['Paiement','landmark']],stepIdx)}</div>` + body;
+};
+
+V.ventes = () => {
+  const fa = DOCS.find(d=>d.num==='FA-2026-0231');
+  const cre = DOCS.filter(d=>d.type==='Facture').reduce((s,d)=>s+(d.ttc-d.paye),0);
+  return ph('Ventes','Devis, commandes, livraisons, factures et encaissements',
+    `<button class="btn">${ic('file-plus')}Nouveau devis</button><button class="btn pri" onclick="go('facture')">${ic('printer')}Voir facture exemple</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">CA facturé (oct.)</div><div class="val">${fmt(CA12[11],0)}<small>DT</small></div><span class="trend up">${ic('trending-up')}+8,1 %</span></div>
+    <div class="card kpi"><div class="lbl">Devis en cours</div><div class="val">${DOCS.filter(d=>d.statut==='Envoyé').length}</div><span class="sub" style="margin:0">${dt(DOCS.filter(d=>d.statut==='Envoyé').reduce((s,d)=>s+d.ttc,0),0)} TTC</span></div>
+    <div class="card kpi"><div class="lbl">Créances clients</div><div class="val" style="color:var(--amber)">${fmt(cre,0)}<small>DT</small></div><span class="sub" style="margin:0">dont 47 600 DT échus</span></div>
+    <div class="card kpi"><div class="lbl">Taux d'encaissement</div><div class="val">78,4 %</div><span class="sub" style="margin:0">sur 90 jours</span></div>
+  </div>
+  <div class="card mb"><div class="hd"><h3>${ic('workflow')}Suivi d'affaire — Villa Lotfi</h3><span class="lnk" onclick="go('client','C001')">Fiche client ${ic('chevron-right')}</span></div>
+  ${wf([['Devis','file-text','DV-2026-081','19/09 · accepté'],['Commande','clipboard-check','CMD-2026-071','26/09'],['Bon de livraison','truck','BL-2026-0309','08/10 · livré'],['Facture','receipt','FA-2026-0231','20/10 · 11 901 DT'],['Encaissement','banknote','6 000 / 11 901 DT','Reste 5 901 DT']],4)}</div>
+  <div class="grid g21">
+    <div class="card"><div class="hd"><h3>${ic('files')}Documents récents</h3><div class="chips"><span class="chip on">Tous</span><span class="chip">Devis</span><span class="chip">Commandes</span><span class="chip">BL</span><span class="chip">Factures</span></div></div>
+    <div class="bd np"><table><thead><tr><th>N°</th><th>Type</th><th>Client</th><th>Date</th><th class="r">Montant TTC</th><th>Statut</th></tr></thead><tbody>
+    ${DOCS.slice(0,10).map(d=>`<tr class="click" onclick="${d.num==='FA-2026-0231'?"go('facture')":(d.client!=='COMPTOIR'?`go('client','${d.client}')`:'')}"><td class="ref">${d.num}</td><td>${d.type}</td><td><b>${cname(d.client)}</b></td><td class="muted">${d.date}</td><td class="r strong">${fmt(d.ttc)}</td><td>${badge(d.statut)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="card"><div class="hd"><h3>${ic('users')}Clients</h3><span class="lnk" onclick="go('clients')">Tous ${ic('chevron-right')}</span></div><div class="bd np">
+    ${CLIENTS.map(c=>`<div class="mini" style="cursor:pointer" onclick="go('client','${c.id}')"><div class="empavatar" style="background:#1E2227">${initials(c.nom)}</div><div><b>${c.nom}</b><small>${c.type} · ${c.ville}</small></div><div class="end"><b>${fmt(caClient(c.id),0)} DT</b><br><small class="${creance(c.id)>0?'neg':'muted'}">${creance(c.id)>0?'Dû '+fmt(creance(c.id),0)+' DT':'À jour'}</small></div></div>`).join('')}
+    </div></div>
+  </div>`;
+};
+
+V.facture = () => {
+  const c = cli('C001');
+  const L = [
+    ['CAR-6060-BM','Carrelage grès cérame 60×60 Beige marbré — fourniture','m²',46,48],
+    ['FAI-3090-BL','Faïence murale 30×90 Blanc mat — fourniture','m²',30,42],
+    ['SAN-WCS-01','WC suspendu céramique + bâti-support Geberit','u',1,590],
+    ['SAN-MIT-03','Mitigeur lavabo chromé Grohe','u',2,125],
+    ['LUM-SPT-12','Spot LED encastrable 12 W blanc chaud','u',24,24],
+    ['PEI-SAT-20','Peinture satinée intérieure 20 L Blanc cassé','seau',5,138],
+    ['COL-C2-25','Colle carrelage C2 25 kg','sac',12,34],
+    ['MO-FORF','Main-d\'œuvre : pose carrelage & faïence, plomberie, peinture','forfait',1,3618],
+    ['TR-LIV','Transport & livraison chantier Hammamet','forfait',1,400],
+  ];
+  const ht = L.reduce((s,l)=>s+l[3]*l[4],0), tva = ht*0.19, timbre=1, ttc=ht+tva+timbre;
+  return `<div class="noprint">${backL('ventes','Retour aux ventes')}${ph('Facture FA-2026-0231','Villa Lotfi · Chantier CH-2026-014 · Aperçu avant impression',
+    `<button class="btn">${ic('mail')}Envoyer par e-mail</button><button class="btn">${ic('file-down')}PDF</button><button class="btn pri" onclick="window.print()">${ic('printer')}Imprimer</button>`)}</div>
+  <div class="inv-wrap"><div id="invoice">
+    <div class="stamp">PARTIELLEMENT RÉGLÉE</div>
+    <div class="ihead">
+      <div><div class="ilogo"><div class="logo">NB</div><div><b>NB CONCEPT</b><small>MATÉRIAUX DE DÉCORATION · TRAVAUX · CHANTIERS</small></div></div>
+        <div class="co">Zone Industrielle, Route de Mornag — 2013 Ben Arous, Tunisie<br>Tél. +216 71 000 000 · contact@nbconcept.tn<br>MF : 1234567/A/M/000 · RC : B01234562020</div></div>
+      <div class="ititle"><h2>FACTURE</h2><table>
+        <tr><td>N°</td><td><b>FA-2026-0231</b></td></tr><tr><td>Date</td><td>20/10/2026</td></tr><tr><td>Échéance</td><td>19/11/2026</td></tr><tr><td>Réf. chantier</td><td>CH-2026-014</td></tr><tr><td>Bon de livraison</td><td>BL-2026-0309</td></tr></table></div>
+    </div>
+    <div class="parties">
+      <div class="party"><span>Facturé à</span><div class="box"><b>${c.nom}</b><br>${c.contact}<br>${c.adr}<br>Tél. ${c.tel}</div></div>
+      <div class="party"><span>Chantier</span><div class="box"><b>Chantier Villa Lotfi — Hammamet</b><br>Rénovation salle de bain + séjour<br>Responsable : Karim Mejri<br>Devis : DV-2026-081 · Commande : CMD-2026-071</div></div>
+    </div>
+    <table class="items"><thead><tr><th>Réf.</th><th>Désignation</th><th class="r">Qté</th><th>Unité</th><th class="r">PU HT</th><th class="r">TVA</th><th class="r">Total HT</th></tr></thead><tbody>
+    ${L.map(l=>`<tr><td class="ref" style="font-size:10.5px">${l[0]}</td><td>${l[1]}</td><td class="r">${l[3]}</td><td>${l[2]}</td><td class="r">${fmt(l[4])}</td><td class="r">19 %</td><td class="r"><b>${fmt(l[3]*l[4])}</b></td></tr>`).join('')}
+    </tbody></table>
+    <div class="totals">
+      <div class="words"><b>Arrêtée la présente facture à la somme de :</b><div class="box">Onze mille neuf cent un dinars, zéro millime (TTC).</div>
+        <div style="margin-top:12px"><b>Règlements reçus :</b> chèque n° 4471209 du 21/10/2026 — 6 000,000 DT<br><b>Reste à payer :</b> <span style="color:var(--red);font-weight:700">${dt(ttc-6000)}</span></div>
+        <div style="margin-top:10px">Mode de règlement : chèque ou virement bancaire<br>RIB : 00 000 0000000000000 00 (fictif)</div></div>
+      <div class="tt">
+        <div><span>Total HT</span><b>${fmt(ht)}</b></div>
+        <div><span>TVA 19 %</span><b>${fmt(tva)}</b></div>
+        <div><span>Timbre fiscal</span><b>${fmt(timbre)}</b></div>
+        <div class="grand"><span>Net à payer TTC</span><span>${dt(ttc)}</span></div>
+      </div>
+    </div>
+    <div class="sign"><div>Cachet & signature NB CONCEPT</div><div>Bon pour accord — client</div></div>
+    <div class="ifoot"><span>NB CONCEPT — SARL · Ben Arous · Document généré par le logiciel de gestion NB CONCEPT</span><span>Page 1 / 1</span></div>
+  </div></div>`;
+};
+
+V.chantiers = () => {
+  const act = CHANTIERS.filter(c=>c.statut==='En cours');
+  const totV = CHANTIERS.filter(c=>c.cout).reduce((s,c)=>s+c.vente,0), totB = CHANTIERS.filter(c=>c.cout).reduce((s,c)=>s+c.benef,0);
+  return ph('Chantiers','Suivi des chantiers, consommations, main-d\'œuvre et rentabilité réelle',
+    `<button class="btn">${ic('calendar-range')}Planning</button><button class="btn pri">${ic('plus')}Nouveau chantier</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">Chantiers en cours<span class="ic">${ic('hard-hat')}</span></div><div class="val">${act.length}</div><span class="sub" style="margin:0">+ 1 en attente · 1 terminé ce mois</span></div>
+    <div class="card kpi"><div class="lbl">Montant vendu (actifs)</div><div class="val">${fmt(CHANTIERS.reduce((s,c)=>s+c.vente,0),0)}<small>DT</small></div><span class="sub" style="margin:0">${CHANTIERS.length} chantiers</span></div>
+    <div class="card kpi"><div class="lbl">Bénéfice réel cumulé</div><div class="val" style="color:var(--acc)">${fmt(totB,0)}<small>DT</small></div><span class="sub" style="margin:0">Marge moyenne ${fmt(totB/totV*100,1)} %</span></div>
+    <div class="card kpi"><div class="lbl">Dépassements détectés</div><div class="val" style="color:var(--red)">${CHANTIERS.filter(c=>c.cout>c.coutP&&c.cout).length}</div><span class="sub" style="margin:0">Coût réel &gt; prévisionnel</span></div>
+  </div>
+  <div class="card"><div class="toolbar"><div class="field">${ic('search')}Rechercher un chantier, un client…</div><div class="chips"><span class="chip on">Tous</span><span class="chip">En cours</span><span class="chip">En attente</span><span class="chip">Terminés</span></div></div>
+  <table><thead><tr><th>N°</th><th>Chantier</th><th>Client</th><th>Statut</th><th>Début → Fin</th><th>Avancement</th><th class="r">Montant vendu</th><th class="r">Bénéfice</th><th>Marge</th></tr></thead><tbody>
+  ${CHANTIERS.map(c=>`<tr class="click" onclick="go('chantier','${c.id}')"><td class="ref">${c.id}</td><td><b>${c.nom}</b><div class="muted" style="font-size:12px">Resp. ${c.resp}</div></td><td>${cli(c.client).nom}</td><td>${badge(c.statut)}</td><td class="muted">${c.debut} → ${c.fin}</td>
+  <td style="min-width:120px"><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${c.avancement}%;background:var(--ink2)"></i></div><span class="muted" style="font-size:12px">${c.avancement}%</span></div></td>
+  <td class="r strong">${fmt(c.vente)}</td><td class="r ${c.benef<0?'neg':'pos'}">${c.cout?fmt(c.benef):'—'}</td><td>${mTxt(c)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+};
+
+V.chantier = (id) => {
+  const c = chan(id), cl = cli(c.client);
+  if(!c.cout) return backL('chantiers','Retour aux chantiers') + ph(c.nom,`${c.id} · ${cl.nom} · ${c.adr}`, `<button class="btn pri">${ic('play')}Démarrer le chantier</button>`) +
+    `<div class="card mb"><div class="info"><div><span>Client</span><b>${cl.nom}</b></div><div><span>Dates prévues</span><b>${c.debut} → ${c.fin}</b></div><div><span>Responsable</span><b>${c.resp}</b></div><div><span>Statut</span>${badge(c.statut)}</div></div></div>
+    <div class="grid g3"><div class="card kpi"><div class="lbl">Montant vendu (HT)</div><div class="val">${fmt(c.vente,0)}<small>DT</small></div><span class="sub" style="margin:0">Devis ${c.devis}</span></div>
+    <div class="card kpi"><div class="lbl">Bénéfice prévisionnel</div><div class="val" style="color:var(--acc)">${fmt(c.vente*c.margePrev/100,0)}<small>DT</small></div><span class="sub" style="margin:0">Marge prévue ${c.margePrev} %</span></div>
+    <div class="card kpi"><div class="lbl">Matériaux à réserver</div><div class="val">—</div><span class="sub" style="margin:0">Réservation au démarrage</span></div></div>
+    <div class="note" style="margin-top:18px">${ic('info')}<span>${c.desc}. Les coûts réels (matériaux, main-d'œuvre, dépenses) seront alimentés automatiquement dès le démarrage.</span></div>`;
+
+  const mx = c.vente;
+  const rows = [['Matériaux',c.matR,'#2458B8'],['Main-d\'œuvre',c.moR,'#7C4DCC'],['Transport',c.trR,'#B86E00'],['Autres dépenses',c.auR,'#6B7280']];
+  let off = 0;
+  const wrows = `<div class="wrow"><span class="lab">Vente chantier</span><div class="track"><i style="left:0;width:100%;background:var(--acc);opacity:.85"></i></div><span class="amt">${dt(c.vente)}</span></div>` +
+    rows.map(r=>{const w=r[1]/mx*100; const h=`<div class="wrow"><span class="lab">${r[0]}</span><div class="track"><i style="left:${off}%;width:${w}%;background:${r[2]}"></i></div><span class="amt neg">−${fmt(r[1])}</span></div>`; off+=w; return h;}).join('') +
+    `<div class="wrow res"><span class="lab">Bénéfice réel</span><div class="track"><i style="left:${c.benef>0?off:0}%;width:${Math.abs(c.benef)/mx*100}%;background:${c.benef<0?'var(--red)':'var(--acc)'}"></i></div><span class="amt" style="font-size:15px;color:${mCol(c.marge)}">${dt(c.benef)}</span></div>`;
+  const R=34, C=2*Math.PI*R, pct=Math.max(0,Math.min(100,c.marge));
+  const ecart = c.benef-(c.vente-c.coutP);
+  return backL('chantiers','Retour aux chantiers') + ph(c.nom,`<span class="ref">${c.id}</span> · ${c.desc}`,
+    `<button class="btn">${ic('printer')}Imprimer la fiche</button><button class="btn">${ic('file-spreadsheet')}Export Excel</button><button class="btn pri">${ic('plus')}Ajouter une dépense</button>`) +
+  `<div class="card mb"><div class="info" style="grid-template-columns:repeat(6,1fr)">
+    <div><span>Client</span><b style="color:var(--acc);cursor:pointer" onclick="go('client','${cl.id}')">${cl.nom}</b></div>
+    <div><span>Adresse</span><b>${c.adr}</b></div>
+    <div><span>Dates</span><b>${c.debut} → ${c.fin}</b></div>
+    <div><span>Responsable</span><b>${c.resp}</b></div>
+    <div><span>Devis associé</span><b class="ref">${c.devis}</b></div>
+    <div><span>Statut</span>${badge(c.statut)} <span class="muted" style="font-size:12px">${c.avancement}%</span></div>
+  </div></div>
+
+  <div class="card mb"><div class="hd"><h3>${ic('calculator')}Calcul de rentabilité du chantier</h3><span class="badge b-gray">Calcul automatique</span></div>
+    <div class="profit" style="margin-top:12px;border-top:1px solid var(--line)">
+      <div class="waterfall">${wrows}</div>
+      <div class="result">
+        <span class="lab">Bénéfice réel</span>
+        <div class="hero" style="color:${mCol(c.marge)}">${fmt(c.benef,0)} <small>DT</small></div>
+        <span class="muted">sur un chiffre d'affaires de ${dt(c.vente,0)}</span>
+        <div class="ring"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="${R}" fill="none" stroke="#E6E8EC" stroke-width="9"/><circle cx="42" cy="42" r="${R}" fill="none" stroke="${mCol(c.marge)}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C*pct/100} ${C}" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="16" font-weight="800" fill="${mCol(c.marge)}" font-family="Inter">${fmt(c.marge,0)}%</text></svg>
+          <div><b>Marge ${fmt(c.marge,1)} %</b><br><span class="muted" style="font-size:12.5px">Prévisionnel : ${fmt((c.vente-c.coutP)/c.vente*100,1)} %</span><br><span class="${ecart>=0?'pos':'neg'}" style="font-size:12.5px">${ecart>=0?'▲ +':'▼ '}${fmt(ecart,0)} DT vs prévu</span></div></div>
+        <div class="formula">Bénéfice = CA − matériaux − main-d'œuvre − transport − autres<br><b>${fmt(c.vente,0)} − ${fmt(c.matR,0)} − ${fmt(c.moR,0)} − ${fmt(c.trR,0)} − ${fmt(c.auR,0)} = ${fmt(c.benef,0)} DT</b><br>Marge = bénéfice ÷ CA × 100 = <b>${fmt(c.marge,1)} %</b></div>
+      </div>
+    </div></div>
+
+  <div class="card mb"><div class="hd"><h3>${ic('package')}Matériaux utilisés</h3><span class="badge b-green">Déduits automatiquement du stock</span></div><div class="bd np"><table><thead><tr><th>Produit</th><th class="r">Qté prévue</th><th class="r">Qté réelle</th><th class="r">Écart</th><th class="r">Prix achat</th><th class="r">Coût total</th></tr></thead><tbody>
+  ${c.mats.map(m=>{const a=art(m[0]); const e=m[2]-m[1]; return `<tr class="click" onclick="go('article','${a.ref}')"><td><b>${a.des}</b><div class="ref muted">${a.ref}</div></td><td class="r">${m[1]} ${a.u}</td><td class="r strong">${m[2]} ${a.u}</td><td class="r ${e>0?'neg':(e<0?'pos':'muted')}">${e>0?'+':''}${e}</td><td class="r">${fmt(a.pa)}</td><td class="r strong">${fmt(m[2]*a.pa)}</td></tr>`}).join('')}
+  </tbody><tfoot><tr><td colspan="5">Total matériaux</td><td class="r">${dt(c.matR)}</td></tr></tfoot></table></div></div>
+
+  <div class="grid g2">
+    <div class="card"><div class="hd"><h3>${ic('users')}Main-d'œuvre</h3><span class="lnk" onclick="go('employes')">Employés ${ic('chevron-right')}</span></div><div class="bd np"><table><thead><tr><th>Employé</th><th class="r">Heures</th><th class="r">Tarif / h</th><th class="r">Coût</th></tr></thead><tbody>
+    ${c.mo.map(m=>`<tr><td><b>${m[0]}</b><div class="muted" style="font-size:12px">${m[1]}</div></td><td class="r">${m[3]} h <span class="muted" style="font-size:11.5px">/ ${m[2]} prév.</span></td><td class="r">${fmt(m[4])}</td><td class="r strong">${fmt(m[3]*m[4])}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="3">Total main-d'œuvre</td><td class="r">${dt(c.moR)}</td></tr></tfoot></table></div></div>
+    <div class="card"><div class="hd"><h3>${ic('receipt')}Autres dépenses</h3></div><div class="bd np"><table><thead><tr><th>Type</th><th>Libellé</th><th class="r">Prévu</th><th class="r">Réel</th></tr></thead><tbody>
+    ${c.autres.map(a=>`<tr><td><span class="badge b-gray">${a[0]}</span></td><td>${a[1]}</td><td class="r muted">${fmt(a[2])}</td><td class="r strong">${fmt(a[3])}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="3">Total transport + autres</td><td class="r">${dt(c.trR+c.auR)}</td></tr></tfoot></table></div></div>
+  </div>
+
+  <div class="card" style="margin-top:18px"><div class="hd"><h3>${ic('git-compare')}Prévisionnel vs réel</h3></div><div class="bd np"><table><thead><tr><th>Poste</th><th class="r">Prévisionnel</th><th class="r">Réel</th><th class="r">Écart</th><th>Situation</th></tr></thead><tbody>
+  ${[['Matériaux',c.matP,c.matR],['Main-d\'œuvre',c.moP,c.moR],['Transport',c.trP,c.trR],['Autres dépenses',c.auP,c.auR]].map(r=>{const e=r[2]-r[1];return `<tr><td><b>${r[0]}</b></td><td class="r">${fmt(r[1])}</td><td class="r strong">${fmt(r[2])}</td><td class="r ${e>0?'neg':(e<0?'pos':'muted')}">${e>0?'+':''}${fmt(e)}</td><td>${e>0?'<span class="badge b-red">Dépassement</span>':(e<0?'<span class="badge b-green">Économie</span>':'<span class="badge b-gray">Conforme</span>')}</td></tr>`}).join('')}
+  </tbody><tfoot><tr><td>Coût total</td><td class="r">${fmt(c.coutP)}</td><td class="r">${fmt(c.cout)}</td><td class="r ${c.cout>c.coutP?'neg':'pos'}">${c.cout>c.coutP?'+':''}${fmt(c.cout-c.coutP)}</td><td></td></tr></tfoot></table></div></div>`;
+};
+
+V.caisse = (tab) => {
+  tab = tab || 'caisse';
+  const A = tab==='caisse'?CAISSE:BANQUE;
+  const enc = A.mvts.filter(m=>m[3]>0).reduce((s,m)=>s+m[3],0), dec = A.mvts.filter(m=>m[3]<0).reduce((s,m)=>s-m[3],0);
+  return ph('Caisse & Banque','Entrées, sorties, encaissements clients, paiements fournisseurs, virements et chèques',
+    `<button class="btn">${ic('arrow-left-right')}Virement interne</button><button class="btn">${ic('minus-circle')}Décaissement</button><button class="btn pri">${ic('plus-circle')}Encaissement</button>`) +
+  `<div class="grid g3 mb">
+    <div class="card kpi" style="cursor:pointer;${tab==='caisse'?'border-color:var(--acc);box-shadow:0 0 0 3px var(--accSoft)':''}" onclick="go('caisse','caisse')"><div class="lbl">Caisse Showroom<span class="ic">${ic('banknote')}</span></div><div class="val">${fmt(CAISSE.solde)}<small>DT</small></div><span class="sub" style="margin:0">Espèces · clôture hier 18:30</span></div>
+    <div class="card kpi" style="cursor:pointer;${tab==='banque'?'border-color:var(--acc);box-shadow:0 0 0 3px var(--accSoft)':''}" onclick="go('caisse','banque')"><div class="lbl">Compte Bancaire<span class="ic" style="background:var(--blueSoft);color:var(--blue)">${ic('landmark')}</span></div><div class="val">${fmt(BANQUE.solde)}<small>DT</small></div><span class="sub" style="margin:0">Rapproché au 21/10/2026</span></div>
+    <div class="card kpi" style="background:var(--side);border-color:var(--side);color:#fff"><div class="lbl" style="color:#9AA1AA">Trésorerie totale<span class="ic" style="background:#2A2F35;color:#3DD2A6">${ic('wallet')}</span></div><div class="val">${fmt(CAISSE.solde+BANQUE.solde)}<small style="color:#9AA1AA">DT</small></div><span class="sub" style="margin:0;color:#9AA1AA">Caisse + banque</span></div>
+  </div>
+  <div class="tabs"><div class="tab ${tab==='caisse'?'on':''}" onclick="go('caisse','caisse')">${ic('banknote')}Caisse Showroom</div><div class="tab ${tab==='banque'?'on':''}" onclick="go('caisse','banque')">${ic('landmark')}Compte Bancaire</div></div>
+  <div class="card">
+    <div class="account-hero"><div style="display:flex;align-items:center;gap:16px"><div class="ico" style="background:${tab==='caisse'?'var(--accSoft)':'var(--blueSoft)'};color:${tab==='caisse'?'var(--acc)':'var(--blue)'}">${ic(tab==='caisse'?'banknote':'landmark')}</div><div><span class="muted">Solde actuel — ${A.nom}</span><div class="big">${dt(A.solde)}</div></div></div>
+      <div style="display:flex;gap:28px"><div><span class="muted" style="font-size:12px">Encaissements (période)</span><div class="pos" style="font-size:18px">+${fmt(enc)}</div></div><div><span class="muted" style="font-size:12px">Décaissements (période)</span><div class="neg" style="font-size:18px">−${fmt(dec)}</div></div></div></div>
+    <table><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="r">Encaissement</th><th class="r">Décaissement</th><th class="r">Solde</th></tr></thead><tbody>
+    ${A.mvts.map(m=>`<tr><td class="muted">${m[0]}</td><td><b>${m[1]}</b></td><td><span class="badge b-gray">${m[2]}</span></td><td class="r pos">${m[3]>0?'+'+fmt(m[3]):''}</td><td class="r neg">${m[3]<0?'−'+fmt(-m[3]):''}</td><td class="r strong">${fmt(m[4])}</td></tr>`).join('')}
+    </tbody></table></div>`;
+};
+
+V.clients = () => ph('Clients',`${CLIENTS.length} clients actifs · particuliers, promoteurs, hôtellerie`,`<button class="btn pri">${ic('user-plus')}Nouveau client</button>`) +
+  `<div class="card"><div class="toolbar"><div class="field">${ic('search')}Rechercher un client…</div></div><table><thead><tr><th>Client</th><th>Type</th><th>Ville</th><th>Contact</th><th class="r">CA cumulé (TTC)</th><th class="r">Solde dû</th><th>Chantiers</th></tr></thead><tbody>
+  ${CLIENTS.map(c=>`<tr class="click" onclick="go('client','${c.id}')"><td><div style="display:flex;align-items:center;gap:10px"><div class="empavatar" style="background:#1E2227">${initials(c.nom)}</div><div><b>${c.nom}</b><div class="ref muted">${c.id}</div></div></div></td><td>${c.type}</td><td>${c.ville}</td><td class="muted">${c.tel}</td><td class="r strong">${fmt(caClient(c.id))}</td><td class="r ${creance(c.id)>0?'neg':'muted'}">${creance(c.id)>0?fmt(creance(c.id)):'—'}</td><td>${CHANTIERS.filter(x=>x.client===c.id).map(x=>`<span class="badge b-gray" style="margin-right:4px">${x.id}</span>`).join('')}</td></tr>`).join('')}
+  </tbody></table></div>`;
+
+V.client = (id) => {
+  const c = cli(id||'C001'), docs = DOCS.filter(d=>d.client===c.id), chs = CHANTIERS.filter(x=>x.client===c.id);
+  const cr = creance(c.id);
+  return backL('clients','Retour aux clients') + `<div class="ph"><div style="display:flex;align-items:center;gap:16px"><div class="empavatar" style="width:54px;height:54px;font-size:18px;background:var(--acc)">${initials(c.nom)}</div><div><h1>${c.nom}</h1><p>${c.type} · ${c.ville} · client depuis ${c.depuis}</p></div></div><div class="actions"><button class="btn">${ic('phone')}Appeler</button><button class="btn">${ic('file-text')}Relevé de compte</button><button class="btn pri">${ic('file-plus')}Nouveau devis</button></div></div>
+  <div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">CA cumulé (TTC)</div><div class="val">${fmt(caClient(c.id),0)}<small>DT</small></div></div>
+    <div class="card kpi"><div class="lbl">Solde dû (créances)</div><div class="val" style="color:${cr>0?'var(--red)':'var(--acc)'}">${fmt(cr,0)}<small>DT</small></div><span class="sub" style="margin:0">${cr>0?'À relancer':'À jour'}</span></div>
+    <div class="card kpi"><div class="lbl">Chantiers liés</div><div class="val">${chs.length}</div></div>
+    <div class="card kpi"><div class="lbl">Documents</div><div class="val">${docs.length}</div><span class="sub" style="margin:0">devis, commandes, BL, factures</span></div>
+  </div>
+  <div class="grid g12">
+    <div><div class="card mb"><div class="hd"><h3>${ic('contact')}Coordonnées</h3></div><div class="bd">
+      ${[['Contact',c.contact],['Adresse',c.adr],['Téléphone',c.tel],['E-mail',c.mail],['Matricule fiscal',c.mf],['Conditions','30 jours fin de mois']].map(k=>`<div class="kv" style="gap:16px"><span>${k[0]}</span><b style="text-align:right">${k[1]}</b></div>`).join('')}
+    </div></div>
+    <div class="card"><div class="hd"><h3>${ic('hard-hat')}Chantiers liés</h3></div><div class="bd np">
+      ${chs.map(x=>`<div class="mini" style="cursor:pointer" onclick="go('chantier','${x.id}')"><div class="ico" style="background:var(--accSoft);color:var(--acc)">${ic('hard-hat')}</div><div><b>${x.court}</b><small>${x.id} · ${fmt(x.vente,0)} DT</small></div><div class="end">${badge(x.statut)}<br>${mTxt(x)}</div></div>`).join('') || '<div class="mini muted">Aucun chantier</div>'}
+    </div></div></div>
+    <div class="card"><div class="hd"><h3>${ic('history')}Historique commandes & factures</h3></div><div class="bd np"><table><thead><tr><th>N°</th><th>Type</th><th>Date</th><th class="r">Montant TTC</th><th class="r">Réglé</th><th class="r">Reste</th><th>Statut</th></tr></thead><tbody>
+    ${docs.map(d=>`<tr class="${d.num==='FA-2026-0231'?'click':''}" ${d.num==='FA-2026-0231'?`onclick="go('facture')"`:''}><td class="ref">${d.num}</td><td>${d.type}</td><td class="muted">${d.date}</td><td class="r strong">${fmt(d.ttc)}</td><td class="r">${d.type==='Facture'?fmt(d.paye):'—'}</td><td class="r ${d.type==='Facture'&&d.ttc-d.paye>0?'neg':'muted'}">${d.type==='Facture'?fmt(d.ttc-d.paye):'—'}</td><td>${badge(d.statut)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+  </div>`;
+};
+
+V.employes = () => ph('Employés','Présence, heures travaillées et affectation automatique du coût aux chantiers',`<button class="btn">${ic('clock')}Pointage du jour</button><button class="btn pri">${ic('user-plus')}Nouvel employé</button>`) +
+  `<div class="grid g4 mb">
+    <div class="card kpi"><div class="lbl">Effectif</div><div class="val">${EMPLOYES.length}</div><span class="sub" style="margin:0">4 terrain · 2 showroom/dépôt</span></div>
+    <div class="card kpi"><div class="lbl">Heures (octobre)</div><div class="val">${fmt(EMPLOYES.reduce((s,e)=>s+e.h,0),0)}<small>h</small></div><span class="sub" style="margin:0">+ ${EMPLOYES.reduce((s,e)=>s+e.hs,0)} h supplémentaires</span></div>
+    <div class="card kpi"><div class="lbl">Coût main-d'œuvre (oct.)</div><div class="val">${fmt(EMPLOYES.reduce((s,e)=>s+(e.h+e.hs*1.25)*e.taux,0),0)}<small>DT</small></div><span class="sub" style="margin:0">dont ${fmt(EMPLOYES.filter(e=>e.ch!=='—').reduce((s,e)=>s+(e.h+e.hs*1.25)*e.taux,0),0)} DT affectés chantiers</span></div>
+    <div class="card kpi"><div class="lbl">Taux de présence</div><div class="val">97,5 %</div><span class="sub" style="margin:0">2 absences ce mois</span></div>
+  </div>
+  <div class="card"><table><thead><tr><th>Employé</th><th>Poste</th><th class="r">Coût horaire</th><th class="r">Heures</th><th class="r">Heures sup.</th><th>Présence</th><th>Chantier affecté</th><th>Aujourd'hui</th></tr></thead><tbody>
+  ${EMPLOYES.map(e=>`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="empavatar" style="background:${e.col}">${initials(e.nom)}</div><b>${e.nom}</b></div></td><td>${e.poste}</td><td class="r">${fmt(e.taux)} DT</td><td class="r strong">${e.h} h</td><td class="r">${e.hs} h</td><td style="min-width:120px"><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${e.pres}%;background:var(--acc)"></i></div><span class="muted" style="font-size:12px">${e.pres}%</span></div></td>
+  <td>${e.ch==='—'?'<span class="muted">Showroom / dépôt</span>':`<span class="lnk" style="color:var(--acc);font-weight:600;cursor:pointer" onclick="go('chantier','${e.ch}')">${e.ch} · ${chan(e.ch).court}</span>`}</td><td>${badge('Présent')}</td></tr>`).join('')}
+  </tbody></table></div>`;
+
+V.rapports = () => {
+  const R = [['trending-up','Chiffre d\'affaires','Journalier, mensuel, annuel — par produit, client et période'],['package','Stock & valorisation','Quantités, ruptures, valeur du stock, mouvements par dépôt'],['shopping-cart','Achats','Par fournisseur et période, importations, historique des prix'],['file-text','Ventes & créances','Factures, encaissements, impayés et échéances clients'],['hard-hat','Rentabilité chantiers','Bénéfice et marge par chantier, prévu vs réel'],['users','Main-d\'œuvre','Heures, coûts et affectations par employé et chantier'],['wallet','Trésorerie','Caisse, banque, encaissements et décaissements'],['percent','Marges produits','Marge brute et nette par article et catégorie']];
+  return ph('Rapports & exports','Tous les états de pilotage, exportables en Excel, PDF et CSV',`<button class="btn">${ic('calendar')}Période : Octobre 2026</button><button class="btn pri">${ic('download')}Export complet des données</button>`) +
+  `<div class="grid g2 mb">
+    <div class="card"><div class="hd"><h3>${ic('pie-chart')}Répartition du CA par catégorie — 2026</h3></div><div class="bd"><div class="chartbox"><canvas id="chCat"></canvas></div></div></div>
+    <div class="card"><div class="hd"><h3>${ic('hard-hat')}Marge réelle par chantier</h3></div><div class="bd"><div class="chartbox"><canvas id="chMarge"></canvas></div></div></div>
+  </div>
+  <div class="grid g4">${R.map(r=>`<div class="card exp"><div class="top2"><div class="ic">${ic(r[0])}</div><b>${r[1]}</b></div><p>${r[2]}</p><div class="fmt"><span class="x">${ic('file-spreadsheet')}Excel</span><span class="p">${ic('file-text')}PDF</span><span class="v">${ic('file')}CSV</span></div></div>`).join('')}</div>`;
+};
+
+/* =====================================================================
+   CHARTS
+   ===================================================================== */
+let charts = [];
+Chart.defaults.font.family = 'Inter'; Chart.defaults.color = '#6B7280'; Chart.defaults.font.size = 11.5;
+const kfmt = v => (v/1000).toLocaleString('fr-FR')+' k';
+function drawCharts(v){
+  if(v==='dashboard'){
+    charts.push(new Chart(document.getElementById('chCA'),{data:{labels:MOIS,datasets:[
+      {type:'bar',label:'Chiffre d\'affaires',data:CA12,backgroundColor:CA12.map((_,i)=>i===11?'#12916F':'#0E7A5F33'),borderRadius:6,maxBarThickness:34,order:2},
+      {type:'line',label:'Achats',data:ACH12,borderColor:'#2458B8',backgroundColor:'#2458B8',tension:.35,pointRadius:3,borderWidth:2,order:1}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:c=>c.dataset.label+' : '+fmt(c.raw,0)+' DT'}}},scales:{y:{grid:{color:'#F0F1F4'},border:{display:false},ticks:{callback:kfmt}},x:{grid:{display:false}}}}}));
+  }
+  if(v==='rapports'){
+    charts.push(new Chart(document.getElementById('chCat'),{type:'doughnut',data:{labels:['Carrelage & faïence','Sanitaire','Peinture','Luminaire','Parquet','Plâtrerie','Consommables'],datasets:[{data:[36,18,14,12,10,6,4],backgroundColor:['#0E7A5F','#2458B8','#B86E00','#7C4DCC','#8C6A4A','#9AA1AA','#C2362F'],borderWidth:2,borderColor:'#fff'}]},
+      options:{maintainAspectRatio:false,cutout:'64%',plugins:{legend:{position:'right',labels:{usePointStyle:true,boxWidth:8,padding:12}},tooltip:{callbacks:{label:c=>c.label+' : '+c.raw+' %'}}}}}));
+    const cs = CHANTIERS.filter(c=>c.cout);
+    charts.push(new Chart(document.getElementById('chMarge'),{type:'bar',data:{labels:cs.map(c=>c.court),datasets:[{label:'Marge %',data:cs.map(c=>+c.marge.toFixed(1)),backgroundColor:cs.map(c=>mCol(c.marge).includes('red')?'#C2362F':(c.marge<15?'#B86E00':'#0E7A5F')),borderRadius:6,maxBarThickness:28}]},
+      options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Marge : '+fmt(c.raw,1)+' %'}}},scales:{x:{grid:{color:'#F0F1F4'},border:{display:false},ticks:{callback:v=>v+' %'}},y:{grid:{display:false}}}}}));
+  }
+}
+
+/* =====================================================================
+   NAVIGATION SPA (pas de rechargement — seul le panneau change)
+   ===================================================================== */
+const PARENT = {article:'stock', bc:'achats', facture:'ventes', chantier:'chantiers', client:'clients'};
+const TITLES = {dashboard:'Tableau de bord',stock:'Stock & Articles',article:'Fiche article',achats:'Achats',bc:'Bon de commande',ventes:'Ventes',facture:'Facture',chantiers:'Chantiers',chantier:'Fiche chantier',caisse:'Caisse & Banque',clients:'Clients',client:'Fiche client',employes:'Employés',rapports:'Rapports'};
+const view = document.getElementById('view'), scroller = document.getElementById('scroll');
+let first = true;
+function go(v, p){
+  const nav = PARENT[v] || v;
+  document.querySelectorAll('#nav a[data-v]').forEach(a=>a.classList.toggle('active', a.dataset.v===nav));
+  const par = PARENT[v];
+  document.getElementById('crumbs').innerHTML = `<span>NB CONCEPT</span>${ic('chevron-right')}` + (par?`<span style="cursor:pointer" onclick="go('${par}')">${TITLES[par]}</span>${ic('chevron-right')}`:'') + `<b>${TITLES[v]}${p&&v!=='caisse'?' · '+p:''}</b>`;
+  const render = ()=>{
+    charts.forEach(c=>c.destroy()); charts=[];
+    view.innerHTML = V[v](p);
+    lucide.createIcons();
+    drawCharts(v);
+    scroller.scrollTop = 0;
+    requestAnimationFrame(()=>view.classList.remove('out'));
+  };
+  if(first){ first=false; render(); return; }
+  view.classList.add('out');
+  setTimeout(render, 160);
+}
+document.querySelectorAll('#nav a[data-v]').forEach(a=>a.addEventListener('click',()=>go(a.dataset.v)));
+document.getElementById('alertCnt').textContent = alerts().length;
+lucide.createIcons();
+go('dashboard');
+</script>
+</body>
+</html>
